@@ -1,0 +1,93 @@
+
+[
+  {
+    "ticket_id": "TKT-001",
+    "customer_name": "Rahul Sharma",
+    "customer_email": "rahul@example.com",
+    "channel": "email",
+    "subject": "Charged twice this month",
+    "message": "I noticed two identical charges of $49 on my bank statement this month. Both appeared on the same date. Please look into this and fix it immediately.",
+    "product_area": "Billing"
+  },
+  {
+    "ticket_id": "TKT-002",
+    "customer_name": "Priya Patel",
+    "customer_email": "priya@example.com",
+    "channel": "chat",
+    "subject": "Payment failed on upgrade",
+    "message": "Hi, my payment did not go through when I tried to upgrade my plan. No big deal, just wanted to flag it. Can you help me sort this out?",
+    "product_area": "Billing"
+  },
+  {
+    "ticket_id": "TKT-003",
+    "customer_name": "Amit Verma",
+    "customer_email": "amit@example.com",
+    "channel": "web",
+    "subject": "Cannot log into my account",
+    "message": "I am completely locked out of my account. I tried resetting my password but I am not receiving the reset email. I have checked my spam folder too. Please help.",
+    "product_area": "Account"
+  },
+  {
+    "ticket_id": "TKT-004",
+    "customer_name": "Sneha Joshi",
+    "customer_email": "sneha@example.com",
+    "channel": "email",
+    "subject": "Demand full refund immediately",
+    "message": "This is absolutely unacceptable. Your product does not work and I want a full refund immediately. I have been ignored for 3 days. You people are scammers. I will not let this go.",
+    "product_area": "General"
+  },
+  {
+    "ticket_id": "TKT-005",
+    "customer_name": "Karan Mehta",
+    "customer_email": "karan@example.com",
+    "channel": "chat",
+    "subject": "Why is there no dark mode?",
+    "message": "Why does your dashboard not have a dark mode? Every other tool I use has it. It is really frustrating to use this late at night. This should be a basic feature by now.",
+    "product_area": "Dashboard"
+  },
+  {
+    "ticket_id": "TKT-006",
+    "customer_name": "Neha Gupta",
+    "customer_email": "neha@example.com",
+    "channel": "web",
+    "subject": "Not working",
+    "message": "It is not working.",
+    "product_area": null
+  },
+  {
+    "ticket_id": "TKT-007",
+    "customer_name": "Vijay Kumar",
+    "customer_email": "vijay@example.com",
+    "channel": "email",
+    "subject": "Export crashes on large files",
+    "message": "The export feature crashes sometimes when I try to download large files. It does not always happen. I am using Chrome on Windows 11. The file size is usually above 50MB when it fails.",
+    "product_area": "Export"
+  },
+  {
+    "ticket_id": "TKT-008",
+    "customer_name": "Deepa Nair",
+    "customer_email": "deepa@example.com",
+    "channel": "email",
+    "subject": "Filing chargeback and consumer forum complaint",
+    "message": "I have been waiting 2 weeks for my refund and nobody has responded to my emails. I am going to file a chargeback with my bank and report you to the consumer forum if this is not resolved today.",
+    "product_area": "Billing"
+  },
+  {
+    "ticket_id": "TKT-009",
+    "customer_name": "Arjun Singh",
+    "customer_email": "arjun@example.com",
+    "channel": "chat",
+    "subject": "Refund policy question",
+    "message": "Hi, I wanted to ask about your refund policy. If I cancel my subscription mid-month, do I get a prorated refund? Just trying to understand before I make a decision.",
+    "product_area": "Billing"
+  },
+  {
+    "ticket_id": "TKT-010",
+    "customer_name": "Meera Iyer",
+    "customer_email": "meera@example.com",
+    "channel": "web",
+    "subject": "How do I add team members?",
+    "message": "I wanted to know how I can add more team members to my workspace. I checked the settings page but could not find the option. Can you guide me?",
+    "product_area": "Account"
+  }
+]

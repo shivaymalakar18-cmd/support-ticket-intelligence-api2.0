@@ -1,0 +1,11 @@
+
+# .env.*
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env/
+alembic/versions/__pycache__/.env
+.env
