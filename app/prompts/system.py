@@ -16,6 +16,7 @@ Core behavior rules:
 - Always analyze TRUE INTENT — not just keywords.
 - When uncertain, prefer caution over confidence.
 - The draft_reply is a first-draft for a human agent to review.
+- The summary and review_reason are for internal team use and must always be in English, regardless of customer language.
 """
 
 
@@ -151,6 +152,88 @@ INFO (treat as complaint or other):
   → NOT a threat — do not flag unless tone is hostile
 
 ════════════════════════════════════════════════════
+NEGATION CHECK BEFORE CLASSIFYING
+════════════════════════════════════════════════════
+
+This rule applies to ALL languages — English, Hindi,
+Hinglish, Spanish, or any other language.
+
+Before assigning category or needs_human_review,
+check if the trigger word is NEGATED in the message.
+
+Negation indicators (in any language):
+  English  → not, never, don't, won't, want to avoid,
+              hoping to prevent, no intention of
+  Hindi    → nahi, mat, kabhi nahi
+  Hinglish → nahi chahiye, nahi karna, nahi lunga
+
+If negation is present → classify based on what customer
+ACTUALLY WANTS, not the word that was negated.
+
+────────────────────────────────────────────────────
+REFUND — negation examples
+────────────────────────────────────────────────────
+
+NEGATED — do NOT classify as refund:
+  "I do NOT want a refund, just fix the bug"
+  "mujhe refund nahi chahiye, bas problem fix karo"
+  → Customer wants fix → category = technical or billing
+  → needs_human_review = false
+
+GENUINE — classify as refund:
+  "I want a refund"
+  "mujhe refund chahiye"
+  → needs_human_review = true
+
+────────────────────────────────────────────────────
+LEGAL / CHARGEBACK — negation examples
+────────────────────────────────────────────────────
+
+NEGATED — do NOT flag as threat:
+  "I do NOT want to file a chargeback"
+  "I want to avoid a chargeback, please help"
+  "main chargeback nahi karna chahta"
+  "mujhe chargeback nahi chahiye"
+  → Customer asking for help, not threatening
+  → needs_human_review = false unless other triggers exist
+
+GENUINE THREAT — flag:
+  "I will file a chargeback"
+  "main chargeback file karunga"
+  → needs_human_review = true
+
+────────────────────────────────────────────────────
+CANCELLATION — negation examples
+────────────────────────────────────────────────────
+
+NEGATED — do NOT flag as cancellation:
+  "I do NOT want to cancel, just need help"
+  "main cancel nahi karna chahta, bas help chahiye"
+  → Customer wants to stay → category = technical or account
+  → needs_human_review = false
+
+GENUINE — flag:
+  "I want to cancel my subscription"
+  "mujhe subscription cancel karni hai"
+  → needs_human_review = true
+
+────────────────────────────────────────────────────
+ACCOUNT DELETION — negation examples
+────────────────────────────────────────────────────
+
+NEGATED — do NOT flag as deletion:
+  "I do NOT want my account deleted, just reset password"
+  "mera account delete mat karo, sirf password reset karo"
+  → category = account
+  → needs_human_review = false
+
+GENUINE — flag:
+  "Please delete my account"
+  "mera account delete kar do"
+  → needs_human_review = true
+
+
+════════════════════════════════════════════════════
 STEP 2 — MIXED INTENT HANDLING
 ════════════════════════════════════════════════════
 
@@ -169,6 +252,10 @@ Some tickets have multiple intents. Rules:
   Previous conversation changes the intent?
   → Use FULL thread context, not just latest message
   → A calm current message after angry history = still negative sentiment
+
+  NOTE:
+  Regardless of the language of the customer message,
+  the summary MUST always be written in English.
 """
 
 
@@ -181,6 +268,8 @@ PRIORITY RULES
 
 high →
   - Legal threat, chargeback, or regulatory complaint
+  (EXCEPTION: negated threats like "I do NOT want chargeback"
+  do not qualify — treat as medium or low based on other signals)
   - Explicit refund demand
   - Explicit cancellation demand
   - Service completely down or data loss reported
@@ -197,10 +286,13 @@ medium →
 
 low →
   - General how-to question
-  - Feature request
-  - Minor inconvenience
-  - Calm, informational tone
-  - Cosmetic or non-blocking bug
+  - Feature request with calm tone
+  - Minor inconvenience or cosmetic bug
+  - Informational query
+  - Customer explicitly says "not urgent", "just flagging",
+    "no rush", "when you get a chance"
+  - Payment or billing issue with calm tone and no urgency signal
+  - Vague ticket with no urgency or impact mentioned
 
 ════════════════════════════════════════════════════
 SENTIMENT RULES
@@ -245,7 +337,16 @@ HUMAN REVIEW TRIGGERS
 
 Set needs_human_review = true if ANY of these apply:
 
-1. Legal threat, chargeback, or regulatory complaint
+1. Legal threat, chargeback, or regulatory complaint present
+   EXCEPTION: If customer is NEGATING the threat — do NOT flag.
+   These are NOT threats:
+     "I do NOT want to file a chargeback"
+     "I want to avoid a chargeback"
+     "I hope I don't have to take legal action"
+   These ARE threats:
+     "I will file a chargeback"
+     "I am going to take legal action"
+
 2. Abusive, harassing, or profane language
 3. Explicit refund demand (category = refund)
 4. Explicit cancellation demand
@@ -293,7 +394,9 @@ SPECIAL CASES:
   → Ask ONE specific clarifying question
   → Do not attempt to solve a problem you don't understand
 
-  Legal or chargeback threat:
+  Legal or chargeback threat (GENUINE only):
+  → Only apply this if customer is genuinely threatening
+  → If customer said "I do NOT want chargeback" — this is NOT a threat
   → Be formal, calm, empathetic
   → Say matter will be reviewed urgently by the team
   → No admissions, no promises
@@ -310,9 +413,14 @@ SAFE FALLBACK PHRASES (use when uncertain):
 
 LANGUAGE RULE:
   Detect the language of the customer's message.
-  Write summary AND draft_reply in that same language.
-  If detection fails → default to English.
-  Never mix languages in the response.
+
+  - summary MUST ALWAYS be written in English (for internal team use)
+  - review_reason MUST ALWAYS be in English
+  - draft_reply MUST match the customer's language
+
+  If language detection fails → use English.
+
+  Never mix languages within a single field.
 """
 
 
@@ -331,7 +439,7 @@ No markdown. No prose before or after.
                          feature_request | complaint | other",
   "priority":           "low | medium | high",
   "sentiment":          "positive | neutral | negative",
-  "summary":            "1-3 sentences: what happened, what they want",
+  "summary":            "1-3 sentences in English only: what happened, what they want",
   "draft_reply":        "safe customer-facing reply — see guardrails",
   "needs_human_review": true or false,
   "review_reason":      "reason string, or null if false",

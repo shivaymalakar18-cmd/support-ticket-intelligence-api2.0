@@ -89,5 +89,14 @@
     "subject": "How do I add team members?",
     "message": "I wanted to know how I can add more team members to my workspace. I checked the settings page but could not find the option. Can you guide me?",
     "product_area": "Account"
+  },
+  {
+    "ticket_id": "TKT-011",
+    "customer_name": "Priya Patel",
+    "customer_email": "priya@example.com",
+    "channel": "chat",
+    "subject": "issue",
+    "message": "mera subscription ho chuka he but fir bhi me apna payed feature access nahi kar pa raha hu, you solve my problem otherwise me kanooni action lunga",
+    "product_area": "Billing"
   }
 ]

@@ -1,13 +1,19 @@
 
-# 🧠 Support Ticket Intelligence API
+# Support Ticket Intelligence API
 
-A production-minded FastAPI backend system that analyzes customer support tickets using a **hybrid approach (LLM + rule-based logic)** and returns structured, safe, and review-aware responses.
+A production-minded FastAPI service that analyzes **customer support tickets**
+using a hybrid of deterministic rules and LLM-based intent analysis.
+
+The system automatically classifies tickets, detects sentiment, assigns
+priority, generates a safe draft reply, and determines whether human
+review is required — with guaranteed safe fallback behavior when the
+LLM is unavailable.
 
 ---
 
-## 🚀 Project Overview
+## Project Overview
 
-🔹 This system processes customer support tickets and automatically:
+**This system processes customer support tickets and automatically:**
 
 - Classifies the ticket (billing, technical, refund, account, feature_request, complaint, other)
 - Detects sentiment (positive, neutral, negative)
@@ -16,11 +22,11 @@ A production-minded FastAPI backend system that analyzes customer support ticket
 - Generates a safe draft reply (customer-facing)
 - Determines whether human review is required
 
-👉 The system ensures **safe automation with human oversight for risky cases**.
+The system ensures **safe automation with human oversight for risky cases**.
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
 - FastAPI
 - Pydantic (V2)
@@ -32,50 +38,55 @@ A production-minded FastAPI backend system that analyzes customer support ticket
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```md
 [ Client Request ]
         ↓
 [ FastAPI Endpoint ]
         ↓
-[ Prompt Builder ]
+[ Rule Engine ]      
+        ↓
+[ Prompt Builder ]    ← inject the rule alerts  
         ↓
 [ LLM Processing ]
         ↓
-[ JSON Parser ]
+[ JSON Parser + Retry Handler ]
         ↓
-[ Retry Handler ]
-        ↓
-[ Rule Engine ]
+[ Rule Overrides ]    ← again override rule
         ↓
 [ Final Response ]
 ```
 ---
 
-## 🧠 System Design & Decision Flow
+## System Design & Decision Flow
 
-🔹 This system follows a hybrid intelligence approach, where responsibilities are clearly separated between LLM and Rule Engine.
+- This system follows a hybrid intelligence approach, where responsibilities are clearly separated between LLM and Rule Engine.
 
-### 🧠 Decision Responsibility Matrix (LLM vs Rule Engine)  
+### Decision Responsibility Matrix (LLM vs Rule Engine)  
 
-| Field              | Depends On            | Controlled By |
-| ------------------ | --------------------- | ------------- |
-| confidence_score   | LLM reasoning quality | LLM           |
-| category           | Text classification   | LLM           |
-| sentiment          | Emotion detection     | LLM           |
-| priority           | Business rules        | Rule Engine   |
-| needs_human_review | Safety & risk rules   | Rule Engine   |
-| review_reason      | Safety conditions     | Rule Engine   |
+| Field              | Depends On            | Controlled By          |
+| ------------------ | --------------------- | ---------------------- |
+| confidence_score   | LLM reasoning quality | LLM                    |
+| category           | Text classification   | LLM                    |
+| sentiment          | Emotion detection     | LLM                    |
+| summary            | Text understanding    | LLM                    |
+| draft_reply        | Safe response gen     | LLM                    |
+| priority           | Business rules        | LLM + Rule Engine      |
+| needs_human_review | Safety & risk rules   | LLM + Rule Engine      |
+| review_reason      | Safety conditions     | LLM + Rule Engine      |
 
-### 🧠 Key Idea
+- Note: Rule Engine can only upgrade priority, never downgrade.
+Rule Engine can only set needs_human_review to true, never false.
+
+### Key Idea
 - LLM → understanding + interpretation layer
 - Rule Engine → safety + business control layer
 - Final output = combination of both (not one system alone)
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### 1. Health Check
 
@@ -120,9 +131,26 @@ A production-minded FastAPI backend system that analyzes customer support ticket
   "confidence_score": 0.85
 }
 ```
+
+---
+
+### 3. Stats
+
+#### GET `/stats`
+
+##### Response:
+```json
+{
+  "total_tickets": 10,
+  "fallback_tickets": 1,
+  "human_review_tickets": 4,
+  "llm_response_tickets": 6
+}
+```
+
 --- 
 
-## 📦 Ticket Input Model Fields
+## Ticket Input Model Fields
 
 | Field                 | Type         | Required | Description        |
 | --------------------- | ------------ | -------- | ------------------ |
@@ -139,23 +167,9 @@ A production-minded FastAPI backend system that analyzes customer support ticket
 
 ---
 
-## 🧠 Core System Logic  
+## Human Review is triggers when
 
-🔹 LLM Responsibilities
-- Category classification
-- Sentiment detection
-- Summary generation
-- Draft reply generation  
-
-🔹 Rule Engine Responsibilities
-- Rules override LLM for safety & business control.
-- Rules always override LLM decision when conflict occurs.
-
----
-
-## 🚨 Human Review is triggers when
-
-🔹 Human review is required when:  
+**Human review is required when:**  
 
 - Refund request detected
 - Legal or chargeback threat
@@ -166,15 +180,15 @@ A production-minded FastAPI backend system that analyzes customer support ticket
 - Vague or unclear message
 - If ANY condition is true → needs_human_review = true   
 
-🔹 Why Hybrid Approach?  
+**Why Hybrid Approach?**  
 - LLM = understanding layer (probabilistic)
 - Rules = safety layer (deterministic)
 
-👉 Ensures safe + predictable system behavior. 
+- Note: Ensures safe + predictable system behavior. 
 
 ---
 
-## 🔁 Error Handling Strategy
+## Error Handling Strategy
 
 ### System is designed to never crash:
 
@@ -196,13 +210,13 @@ A production-minded FastAPI backend system that analyzes customer support ticket
 
 ---
 
-## 🧪 Test Scenarios
+## Test Scenarios
 
-🔹Run:
+**Run :**
 ```bash
 pytest
 ```
-🔹Covered Cases:   
+**Covered Cases:**   
 - Duplicate billing complaint
 - Payment failure (calm user)
 - Account login issue
@@ -214,22 +228,23 @@ pytest
 
 ---
 
-## 📊 Observability
+## Observability
 
-🔹System logs include:  
+**System logs include:**  
 - request_id (unique tracking)
 - processing time
 - fallback usage
 - human review decision  
 
-### 🧠 Example Logs
+### Example Logs
 ```log
-[abc-123] Ticket received: T101   
-[abc-123] Completed | time=1.21s | fallback=False | review=True
+[b7ef2be1] Ticket received: TKT-002
+[b7ef2be1] LLM attempt 1 succeeded
+[b7ef2be1] Done | time=7.601s | category=billing | priority=high | fallback=False | review=True
 ```
 ---
 
-## ⚠️ Limitations
+## Limitations
 
 - No database storage
 - No authentication layer
@@ -238,7 +253,7 @@ pytest
 
 ---
 
-## 🚀 Future Improvements
+## Future Improvements
 
 - Add database (ticket history storage)
 - Replace keyword rules with NLP model
@@ -248,16 +263,27 @@ pytest
 
 ---
 
-## ▶️ How to Run
+## How to Run
 
 ```bash
+# 1. Install dependencies
 pip install -r requirements.txt
-uvicorn app.main:app --reload
-pytest
+
+# 2. Environment setup
+cp .env.example .env
+# .env mein apni GEMINI_API_KEY daalo
+
+# 3. Run server
+uvicorn main:app --reload
+# Server: http://localhost:8000
+# Docs:   http://localhost:8000/docs
+
+# 4. Run tests (real API key nahi chahiye)
+GEMINI_API_KEY=test pytest tests/ -v
 ```
 ---
 
-## 🧠 Key Design Decisions  
+## Key Design Decisions  
 
 - LLM is NOT fully trusted
 - Rules enforce business safety
@@ -267,9 +293,9 @@ pytest
 
 ---
 
-## 👨‍💻 Final Summary
+## Final Summary
 
-🔹This project demonstrates:
+**This project demonstrates:**
 
 - Real-world backend system design
 - FastAPI production API development

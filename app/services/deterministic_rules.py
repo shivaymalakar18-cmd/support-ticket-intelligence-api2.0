@@ -50,14 +50,29 @@ class RuleResult:
 
 
 # Core rule engine 
+NEGATION_WORDS = [
+    "not", "never", "don't", "won't", "do not", "will not",
+    "nahi", "mat", "nahi karunga", "nahi karna", "nahi chahiye",
+    "want to avoid", "hoping to avoid", "no intention",
+]
+
+def _is_negated(text: str, phrase: str) -> bool:
+    phrase_index = text.find(phrase)
+    if phrase_index == -1:
+        return False
+    
+    # 40 chars pehle bhi check karo
+    before = text[max(0, phrase_index - 40):phrase_index]
+    
+    # 40 chars baad bhi check karo
+    after = text[phrase_index:phrase_index + 50]
+    
+    nearby_text = before + " " + after
+    
+    return any(neg in nearby_text for neg in NEGATION_WORDS)
+
 
 def apply_rules(ticket) -> RuleResult:
-    """
-    Runs deterministic rules on ticket text.
-    Returns RuleResult — analyzer uses this to:
-      1. Inject context into LLM prompt
-      2. Override LLM output after response
-    """
     text = (
         (ticket.message or "") + " " + (ticket.subject or "")
     ).lower().strip()
@@ -67,6 +82,8 @@ def apply_rules(ticket) -> RuleResult:
     # Legal or chargeback threats
     for phrase in LEGAL_THREATS:
         if phrase in text:
+            if _is_negated(text, phrase):
+                break
             result.needs_human_review = True
             result.forced_priority = "high"
             result.review_reasons.append(
@@ -94,6 +111,8 @@ def apply_rules(ticket) -> RuleResult:
     # Explicit refund demand
     for phrase in REFUND_DEMANDS:
         if phrase in text:
+            if _is_negated(text, phrase):
+                break
             result.needs_human_review = True
             result.forced_priority = result.forced_priority or "high"
             result.review_reasons.append("Explicit refund demand")
@@ -107,6 +126,8 @@ def apply_rules(ticket) -> RuleResult:
     # Cancellation demand
     for phrase in CANCELLATION_DEMANDS:
         if phrase in text:
+            if _is_negated(text, phrase):
+                break
             result.needs_human_review = True
             result.forced_priority = result.forced_priority or "high"
             result.review_reasons.append("Account cancellation requested")
@@ -117,9 +138,11 @@ def apply_rules(ticket) -> RuleResult:
             )
             break
 
-    # High priority urgency signals (no review needed, just bump priority)
+    # High priority urgency signals
     for phrase in HIGH_PRIORITY_SIGNALS:
         if phrase in text:
+            if _is_negated(text, phrase):
+                break
             result.forced_priority = result.forced_priority or "high"
             break
 
