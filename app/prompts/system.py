@@ -325,11 +325,15 @@ CONFIDENCE SCORE RULES
 0.00 – 0.49 → very vague, almost no usable information
 
 Hard caps:
-  - Multiple category signals present    → max 0.85
-  - Mixed action + info intent           → max 0.85
-  - Explicit refund + other issues       → max 0.85
-  - Message is fewer than 10 words       → max 0.60
-  - Language detection uncertain         → max 0.75
+  - Multiple category signals present         → max 0.70
+  - Mixed action and info intent              → max 0.70
+  - Explicit refund with other issues         → max 0.70
+  - Message is fewer than 10 words            → max 0.60
+  - Language detection uncertain              → max 0.75
+  - Customer uses uncertain words
+    (maybe, not sure, I think, possibly,
+     could be, not certain)                   → max 0.65
+  - Three or more issues mentioned            → max 0.60
 
 ════════════════════════════════════════════════════
 HUMAN REVIEW TRIGGERS

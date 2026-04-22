@@ -98,5 +98,14 @@
     "subject": "issue",
     "message": "mera subscription ho chuka he but fir bhi me apna payed feature access nahi kar pa raha hu, you solve my problem otherwise me kanooni action lunga",
     "product_area": "Billing"
+  },
+  {
+    "ticket_id": "TEST-VAGUE-001",
+    "customer_name": "Alex Morgan",
+    "customer_email": "alex@example.com",
+    "channel": "chat",
+    "subject": "issue with account and billing maybe",
+    "message": "Hi, something is not working properly. I think I was charged but also I can't access some features anymore. Not sure if it's billing or account issue. Please check this quickly.",
+    "product_area": "unknown"
   }
 ]

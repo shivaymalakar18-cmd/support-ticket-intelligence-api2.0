@@ -51,9 +51,12 @@ class RuleResult:
 
 # Core rule engine 
 NEGATION_WORDS = [
-    "not", "never", "don't", "won't", "do not", "will not",
-    "nahi", "mat", "nahi karunga", "nahi karna", "nahi chahiye",
-    "want to avoid", "hoping to avoid", "no intention",
+    "do not want", "don't want",
+    "not going to file",
+    "want to avoid", "hoping to avoid",
+    "no intention of",
+    "nahi karunga", "nahi chahiye",
+    "nahi karna chahta",
 ]
 
 def _is_negated(text: str, phrase: str) -> bool:
