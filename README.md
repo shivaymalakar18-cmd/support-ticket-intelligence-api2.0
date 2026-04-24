@@ -47,13 +47,13 @@ The system ensures **safe automation with human oversight for risky cases**.
         ↓
 [ Rule Engine ]      
         ↓
-[ Prompt Builder ]    ← inject the rule alerts  
+[ Prompt Builder ]    <- inject the rule alerts  
         ↓
 [ LLM Processing ]
         ↓
 [ JSON Parser + Retry Handler ]
         ↓
-[ Rule Overrides ]    ← again override rule
+[ Rule Overrides ]    <- again override rule
         ↓
 [ Final Response ]
 ```
@@ -178,13 +178,16 @@ Rule Engine can only set needs_human_review to true, never false.
 - Security/data breach mention
 - Confidence score < 0.6
 - Vague or unclear message
-- If ANY condition is true → needs_human_review = true   
+- If ANY condition is true -> needs_human_review = true   
 
 **Why Hybrid Approach?**  
-- LLM = understanding layer (probabilistic)
-- Rules = safety layer (deterministic)
-
-- Note: Ensures safe + predictable system behavior. 
+- LLMs provide strong natural language understanding but are non-deterministic
+- Rule Engine enforces deterministic business logic and consistency
+- Override layer ensures safety by correcting or upgrading risky outputs
+- Hybrid approach balances:
+        1. accuracy (LLM understanding)
+        2. reliability (rule-based control)
+        3. safety (override guarantees)
 
 ---
 

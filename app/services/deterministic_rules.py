@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass, field
 from typing import Optional
-
+from app.utils.logger import logger
 
 # Trigger phrase lists 
 
@@ -74,7 +74,6 @@ def _is_negated(text: str, phrase: str) -> bool:
     
     return any(neg in nearby_text for neg in NEGATION_WORDS)
 
-
 def apply_rules(ticket) -> RuleResult:
     text = (
         (ticket.message or "") + " " + (ticket.subject or "")
@@ -85,8 +84,8 @@ def apply_rules(ticket) -> RuleResult:
     # Legal or chargeback threats
     for phrase in LEGAL_THREATS:
         if phrase in text:
-            if _is_negated(text, phrase):
-                break
+            # if _is_negated(text, phrase):
+            #     break
             result.needs_human_review = True
             result.forced_priority = "high"
             result.review_reasons.append(
@@ -114,8 +113,8 @@ def apply_rules(ticket) -> RuleResult:
     # Explicit refund demand
     for phrase in REFUND_DEMANDS:
         if phrase in text:
-            if _is_negated(text, phrase):
-                break
+            # if _is_negated(text, phrase):
+            #     break
             result.needs_human_review = True
             result.forced_priority = result.forced_priority or "high"
             result.review_reasons.append("Explicit refund demand")
@@ -129,23 +128,23 @@ def apply_rules(ticket) -> RuleResult:
     # Cancellation demand
     for phrase in CANCELLATION_DEMANDS:
         if phrase in text:
-            if _is_negated(text, phrase):
-                break
+            # if _is_negated(text, phrase):
+            #     break
             result.needs_human_review = True
             result.forced_priority = result.forced_priority or "high"
             result.review_reasons.append("Account cancellation requested")
             result.inject_context.append(
                 "ALERT: Customer wants to cancel their account. "
                 "Do NOT confirm cancellation in draft_reply. "
-                "Acknowledge and say the team will follow up."
+                "Acknowledge the request and say it will be reviewed."
             )
             break
 
     # High priority urgency signals
     for phrase in HIGH_PRIORITY_SIGNALS:
         if phrase in text:
-            if _is_negated(text, phrase):
-                break
+            # if _is_negated(text, phrase):
+            #     break
             result.forced_priority = result.forced_priority or "high"
             break
 
@@ -161,5 +160,7 @@ def apply_rules(ticket) -> RuleResult:
             "Set confidence_score low (below 0.60). "
             "Ask one specific clarifying question in draft_reply."
         )
+
+    logger.info(f"from Rule engine --> {result}")
 
     return result

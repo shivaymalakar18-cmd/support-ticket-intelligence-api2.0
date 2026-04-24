@@ -105,6 +105,7 @@ def analyze_ticket_logic(ticket: TicketRequest) -> TicketResponse:
 
     try:
         raw = call_llm(SYSTEM_PROMPT, user_prompt)
+        logger.info(f"from llm --- > {raw}")
         result = _parse(raw)
         logger.info(f"[{request_id}] LLM attempt 1 succeeded")
 
