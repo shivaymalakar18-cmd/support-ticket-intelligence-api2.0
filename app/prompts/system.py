@@ -177,13 +177,15 @@ REFUND — negation examples
 NEGATED — do NOT classify as refund:
   "I do NOT want a refund, just fix the bug"
   "mujhe refund nahi chahiye, bas problem fix karo"
-  → Customer wants fix → category = technical or billing
-  → needs_human_review = false
+  - Customer wants fix -> category = technical or billing
+  - needs_human_review = false
+  - priority = medium or low
 
 GENUINE — classify as refund:
   "I want a refund"
   "mujhe refund chahiye"
-  → needs_human_review = true
+  - needs_human_review = true
+  - priority = high
 
 ────────────────────────────────────────────────────
 LEGAL / CHARGEBACK — negation examples
@@ -194,13 +196,15 @@ NEGATED — do NOT flag as threat:
   "I want to avoid a chargeback, please help"
   "main chargeback nahi karna chahta"
   "mujhe chargeback nahi chahiye"
-  → Customer asking for help, not threatening
-  → needs_human_review = false unless other triggers exist
+  - Customer asking for help, not threatening
+  - needs_human_review = false unless other triggers exist
+  - priority = medium
 
 GENUINE THREAT — flag:
   "I will file a chargeback"
   "main chargeback file karunga"
-  → needs_human_review = true
+  - needs_human_review = true
+  - priority = high 
 
 ────────────────────────────────────────────────────
 CANCELLATION — negation examples
@@ -209,13 +213,15 @@ CANCELLATION — negation examples
 NEGATED — do NOT flag as cancellation:
   "I do NOT want to cancel, just need help"
   "main cancel nahi karna chahta, bas help chahiye"
-  → Customer wants to stay → category = technical or account
-  → needs_human_review = false
+  - Customer wants to stay → category = technical or account
+  - needs_human_review = false
+  - priority = medium
 
 GENUINE — flag:
   "I want to cancel my subscription"
   "mujhe subscription cancel karni hai"
-  → needs_human_review = true
+  - needs_human_review = true
+  - priority = high 
 
 ────────────────────────────────────────────────────
 ACCOUNT DELETION — negation examples
@@ -224,13 +230,15 @@ ACCOUNT DELETION — negation examples
 NEGATED — do NOT flag as deletion:
   "I do NOT want my account deleted, just reset password"
   "mera account delete mat karo, sirf password reset karo"
-  → category = account
-  → needs_human_review = false
+  - category = account
+  - needs_human_review = false
+  - priority = medium
 
 GENUINE — flag:
   "Please delete my account"
   "mera account delete kar do"
-  → needs_human_review = true
+  - needs_human_review = true
+  - priority = high
 
 
 ════════════════════════════════════════════════════
@@ -240,18 +248,18 @@ STEP 2 — MIXED INTENT HANDLING
 Some tickets have multiple intents. Rules:
 
   Explicit refund request present?
-  → category = refund (always wins)
+  - category = refund (always wins)
 
   Otherwise use this priority order:
   billing > technical > account > feature_request > complaint > other
 
   Multiple intents present?
-  → Cap confidence_score at 0.85 maximum
-  → Mention both issues in summary
+  - Cap confidence_score at 0.70 maximum
+  - Mention both issues in summary
 
-  Previous conversation changes the intent?
-  → Use FULL thread context, not just latest message
-  → A calm current message after angry history = still negative sentiment
+  # Previous conversation changes the intent?
+  # - Use FULL thread context, not just latest message
+  # - A calm current message after angry history = still negative sentiment
 
   NOTE:
   Regardless of the language of the customer message,
@@ -266,25 +274,32 @@ CLASSIFICATION_RULES = """
 PRIORITY RULES
 ════════════════════════════════════════════════════
 
-high →
+high ->
   - Legal threat, chargeback, or regulatory complaint
-  (EXCEPTION: negated threats like "I do NOT want chargeback"
-  do not qualify — treat as medium or low based on other signals)
+    (EXCEPTION: negated threats like "I do NOT want chargeback"
+    do not qualify — treat as medium or low based on other signals)
   - Explicit refund demand
   - Explicit cancellation demand
   - Service completely down or data loss reported
   - Security incident or data breach mentioned
   - Very angry tone with abusive language
   - Customer locked out of account entirely
+  - Duplicate charge or incorrect billing amount reported
+  - Any situation where delay or wrong response could cause
+    direct financial loss or legal risk to the business
+  - Customer explicitly mentions urgency
+    ("urgent", "asap", "immediately", "right now")
+    EXCEPTION: "not urgent", "no rush", "when you get time"
+    -> do NOT assign high — use actual issue severity instead
 
-medium →
+medium ->
   - Billing issue without threat
   - Partial outage or intermittent bug
   - Account access issue (not fully locked)
   - Reproducible bug affecting workflow
   - Frustrated tone without threats
 
-low →
+low ->
   - General how-to question
   - Feature request with calm tone
   - Minor inconvenience or cosmetic bug
@@ -298,46 +313,48 @@ low →
 SENTIMENT RULES
 ════════════════════════════════════════════════════
 
-positive →
+positive ->
   Satisfied, grateful, complimenting the product or team.
   "Thanks for the quick help!" / "Love this feature"
 
-neutral →
+neutral ->
   Informational, calm, matter-of-fact.
   "My invoice shows X amount" / "I cannot log in"
   No emotional charge either way.
 
-negative →
+negative ->
   Frustrated, angry, disappointed, threatening.
   "This is unacceptable" / "Worst support ever"
   Any hostile or aggressive tone.
 
-Note: If previous_conversation shows anger but current
-message is calm — sentiment is still negative overall.
+# Note: If previous_conversation shows anger but current
+# message is calm — sentiment is still negative overall.
 
 ════════════════════════════════════════════════════
 CONFIDENCE SCORE RULES
 ════════════════════════════════════════════════════
 
-0.90 – 1.00 → single clear interpretation, obvious intent
-0.70 – 0.89 → mostly clear, minor ambiguity in tone or category
-0.50 – 0.69 → multiple interpretations possible, some vagueness
-0.00 – 0.49 → very vague, almost no usable information
+0.90 - 1.00 -> single clear interpretation, obvious intent
+0.70 - 0.89 -> mostly clear, minor ambiguity in tone or category
+0.50 - 0.69 -> multiple interpretations possible, some vagueness
+0.00 - 0.49 -> very vague, almost no usable information
 
-Hard caps:
-  - Multiple category signals present         → max 0.70
-  - Mixed action and info intent              → max 0.70
-  - Explicit refund with other issues         → max 0.70
-  - Message is fewer than 10 words            → max 0.60
-  - Language detection uncertain              → max 0.75
+Hard caps — apply the LOWEST cap if multiple apply:
+  - Multiple category signals present         -> max 0.70
+  - Mixed action and info intent              -> max 0.70
+  - Explicit refund with other issues         -> max 0.70
+  - Message is in mixed languages
+    or unclear script                         -> max 0.75
   - Customer uses uncertain words
     (maybe, not sure, I think, possibly,
-     could be, not certain)                   → max 0.65
-  - Three or more issues mentioned            → max 0.60
+     could be, not certain)                   -> max 0.65
+  - Three or more issues mentioned            -> max 0.60
+  - Message is extremely vague with
+    almost no usable detail                   -> max 0.49
 
 ════════════════════════════════════════════════════
 HUMAN REVIEW TRIGGERS
-════════════════════════════════════════════════════
+═════════════════════════════════════════
 
 Set needs_human_review = true if ANY of these apply:
 
@@ -355,9 +372,16 @@ Set needs_human_review = true if ANY of these apply:
 3. Explicit refund demand (category = refund)
 4. Explicit cancellation demand
 5. Data breach or security incident mentioned
+   NOTE: Service outage, server down, or technical issues
+   alone do NOT trigger human review. Only flag if combined
+   with legal threat, refund demand, or abusive language.
 6. confidence_score is below 0.60
 7. Situation is ambiguous enough that a wrong reply
    would create business or legal risk
+8. Customer expresses significant financial hardship
+   or emotional distress
+   ("cannot afford", "losing my job", "family emergency")
+   → needs_human_review = true
 
 If none apply → needs_human_review = false
                review_reason = null
@@ -373,7 +397,7 @@ DRAFT REPLY RULES
 The draft_reply is a first-draft for a human agent.
 It must be safe, professional, and non-committal.
 
-✅ ALWAYS DO:
+ ALWAYS DO:
   - Address the customer by their first name
   - Acknowledge the specific issue they reported
   - State next steps in a NON-COMMITTAL way 
@@ -383,7 +407,7 @@ It must be safe, professional, and non-committal.
   - Keep it under 80 words unless complexity requires more
   - Sound human, empathetic, and calm (not robotic)
 
-❌ NEVER DO:
+ NEVER DO:
   - Promise a refund, credit, or any compensation
   - Confirm or deny charges without verified data
   - Give specific resolution timelines
@@ -415,7 +439,7 @@ Legal or chargeback threat:
   - Apply ONLY if the customer explicitly threatens:
     (e.g., "chargeback", "legal action", "consumer court", "fraud case")
 
-  - If the customer says they do NOT want a chargeback -> treat as normal case
+  - If the customer says they do NOT want a chargeback -> treat as normal case (priority=medium, and human review=false -> based on intent of request)
 
   - Maintain a calm, formal, and de-escalating tone
   - Acknowledge the concern without admitting fault

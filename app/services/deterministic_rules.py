@@ -6,23 +6,39 @@ from app.utils.logger import logger
 # Trigger phrase lists 
 
 LEGAL_THREATS = [
-    "i will sue", "i am going to sue", "filing a lawsuit",
-    "take you to court", "my lawyer", "consumer court",
-    "consumer forum", "small claims", "regulatory complaint",
-    "chargeback", "dispute this charge", "reverse the charge",
+    "i will sue", "i am going to sue",
+    "filing a lawsuit", "take you to court",
+    "my lawyer will", "contacted my lawyer",
+    "consumer court", "consumer forum",
+    "small claims", "regulatory complaint",
+    "i will file a chargeback",      # complete phrase
+    "going to file a chargeback",    # complete phrase
+    "filing a chargeback",           # complete phrase
+    "will chargeback",               # complete phrase
+    "dispute this charge",
+    "reverse the charge",
     "i will report you",
 ]
-
 ABUSIVE_PATTERNS = [
-    r"\bmoron\b", r"\bidiot\b", r"\bstupid\b", r"\bscam\b",
-    r"\bfraud\b", r"\bthief\b", r"\bscammer\b", r"\bcriminal\b",
+    r"\bmoron\b",
+    r"\bidiot\b",
+    r"\bstupid\b",
+    r"\bscam\w*\b",      # scam, scammer, scammers
+    r"\bfraud\w*\b",     # fraud, frauds, fraudulent
+    r"\bthief\b",
+    r"\bthieves\b",      # plural
+    r"\bscammer\w*\b",   # scammer, scammers
+    r"\bcriminal\w*\b",  # criminal, criminals
 ]
 
 REFUND_DEMANDS = [
-    "i want a refund", "give me a refund", "refund my money",
-    "money back", "return my payment", "demand a refund",
-    "full refund", "immediate refund", "process a refund",
+    "i want a refund", "give me a refund",
+    "refund my money", "return my payment",
+    "demand a refund", "full refund",
+    "immediate refund", "process a refund",
     "i need a refund",
+    "i want my money back",  
+    "give me my money back", 
 ]
 
 CANCELLATION_DEMANDS = [
@@ -31,13 +47,6 @@ CANCELLATION_DEMANDS = [
     "i want to cancel", "terminate my account",
 ]
 
-HIGH_PRIORITY_SIGNALS = [
-    "urgent", "immediately", "asap", "right now",
-    "not working at all", "completely broken",
-    "cannot access", "locked out", "lost access",
-    "data loss", "lost my data", "data breach",
-    "security incident",
-]
 
 
 # Result dataclass 
@@ -49,31 +58,6 @@ class RuleResult:
     inject_context: list[str] = field(default_factory=list)
 
 
-# Core rule engine 
-NEGATION_WORDS = [
-    "do not want", "don't want",
-    "not going to file",
-    "want to avoid", "hoping to avoid",
-    "no intention of",
-    "nahi karunga", "nahi chahiye",
-    "nahi karna chahta",
-]
-
-def _is_negated(text: str, phrase: str) -> bool:
-    phrase_index = text.find(phrase)
-    if phrase_index == -1:
-        return False
-    
-    # 40 chars pehle bhi check karo
-    before = text[max(0, phrase_index - 40):phrase_index]
-    
-    # 40 chars baad bhi check karo
-    after = text[phrase_index:phrase_index + 50]
-    
-    nearby_text = before + " " + after
-    
-    return any(neg in nearby_text for neg in NEGATION_WORDS)
-
 def apply_rules(ticket) -> RuleResult:
     text = (
         (ticket.message or "") + " " + (ticket.subject or "")
@@ -84,8 +68,7 @@ def apply_rules(ticket) -> RuleResult:
     # Legal or chargeback threats
     for phrase in LEGAL_THREATS:
         if phrase in text:
-            # if _is_negated(text, phrase):
-            #     break
+            logger.info(f"[RULE] Legal threat matched: '{phrase}'")
             result.needs_human_review = True
             result.forced_priority = "high"
             result.review_reasons.append(
@@ -101,6 +84,7 @@ def apply_rules(ticket) -> RuleResult:
     # Abusive language
     for pattern in ABUSIVE_PATTERNS:
         if re.search(pattern, text):
+            logger.info(f"[RULE] Abusive pattern matched: '{pattern}'")
             result.needs_human_review = True
             result.review_reasons.append("Abusive language detected")
             result.inject_context.append(
@@ -113,8 +97,7 @@ def apply_rules(ticket) -> RuleResult:
     # Explicit refund demand
     for phrase in REFUND_DEMANDS:
         if phrase in text:
-            # if _is_negated(text, phrase):
-            #     break
+            logger.info(f"[RULE] Refund demand matched: '{phrase}'")
             result.needs_human_review = True
             result.forced_priority = result.forced_priority or "high"
             result.review_reasons.append("Explicit refund demand")
@@ -128,38 +111,16 @@ def apply_rules(ticket) -> RuleResult:
     # Cancellation demand
     for phrase in CANCELLATION_DEMANDS:
         if phrase in text:
-            # if _is_negated(text, phrase):
-            #     break
+            logger.info(f"[RULE] Cancellation demand matched: '{phrase}'")
             result.needs_human_review = True
             result.forced_priority = result.forced_priority or "high"
             result.review_reasons.append("Account cancellation requested")
             result.inject_context.append(
                 "ALERT: Customer wants to cancel their account. "
                 "Do NOT confirm cancellation in draft_reply. "
-                "Acknowledge the request and say it will be reviewed."
+                "Acknowledge and say the team will follow up."
             )
             break
-
-    # High priority urgency signals
-    for phrase in HIGH_PRIORITY_SIGNALS:
-        if phrase in text:
-            # if _is_negated(text, phrase):
-            #     break
-            result.forced_priority = result.forced_priority or "high"
-            break
-
-    # Very short or vague message
-    word_count = len((ticket.message or "").split())
-    if word_count < 8:
-        result.needs_human_review = True
-        result.review_reasons.append(
-            "Message too short to analyze reliably"
-        )
-        result.inject_context.append(
-            "NOTE: This ticket is very short and vague. "
-            "Set confidence_score low (below 0.60). "
-            "Ask one specific clarifying question in draft_reply."
-        )
 
     logger.info(f"from Rule engine --> {result}")
 

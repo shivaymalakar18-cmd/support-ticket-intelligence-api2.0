@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     # LLM key
     gemini_api_key: str | None = None
     model_name: str
+    llm_timeout_seconds: int
 
     model_config = ConfigDict(
         env_file=".env"

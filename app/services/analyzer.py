@@ -74,7 +74,7 @@ def _fallback(reason: str) -> TicketResponse:
 
 
 
-def analyze_ticket_logic(ticket: TicketRequest) -> TicketResponse:
+async def analyze_ticket_logic(ticket: TicketRequest) -> TicketResponse:
     """
     Full analysis pipeline:
       1. Run hard rules
@@ -104,7 +104,7 @@ def analyze_ticket_logic(ticket: TicketRequest) -> TicketResponse:
     result = None
 
     try:
-        raw = call_llm(SYSTEM_PROMPT, user_prompt)
+        raw = await call_llm(SYSTEM_PROMPT, user_prompt)
         logger.info(f"from llm --- > {raw}")
         result = _parse(raw)
         logger.info(f"[{request_id}] LLM attempt 1 succeeded")
@@ -116,7 +116,8 @@ def analyze_ticket_logic(ticket: TicketRequest) -> TicketResponse:
 
         # Retry with strict prompt (previouse mistake from LLM + user prompt = retry machenism)
         try:
-            raw = call_llm(SYSTEM_PROMPT, user_prompt + RETRY_SUFFIX)
+            raw = await call_llm(SYSTEM_PROMPT, user_prompt + RETRY_SUFFIX)
+            logger.info(f"from llm --- > {raw}")
             result = _parse(raw)
             logger.info(f"[{request_id}] LLM attempt 2 succeeded")
 
@@ -131,6 +132,11 @@ def analyze_ticket_logic(ticket: TicketRequest) -> TicketResponse:
     # Rule overrides — rules always win
     # if not fallback_used:
     #     increment("llm_response_tickets")
+    #     logger.info(
+    #         f"[{request_id}] LLM raw decision | "
+    #         f"review={result.needs_human_review} | "
+    #         f"confidence={result.confidence_score}"
+    #     )
     #     # needs_human_review — rules can only set to true, never false
     #     if rule_result.needs_human_review:
     #         result.needs_human_review = True
@@ -146,38 +152,53 @@ def analyze_ticket_logic(ticket: TicketRequest) -> TicketResponse:
     #             result.priority = PriorityEnum(forced)
 
 
-
     if not fallback_used:
-        # Smart override — rules and LLM combined decision
         increment("llm_response_tickets")
         logger.info(
             f"[{request_id}] LLM raw decision | "
             f"review={result.needs_human_review} | "
             f"confidence={result.confidence_score}"
         )
+
         if rule_result.needs_human_review:
             if result.needs_human_review:
-                # Both rules and LLM flagged — definite escalation
+                # Both flagged — combine reasons
+                reasons = []
+                if rule_result.review_reasons:
+                    reasons.extend(rule_result.review_reasons)
+                if result.review_reason:
+                    reasons.append(result.review_reason)
                 result.needs_human_review = True
-                result.review_reason = ", ".join(rule_result.review_reasons)
+                result.review_reason = (
+                    ", ".join(reasons) if reasons else None
+                )
 
-            elif result.confidence_score >= 0.80:
-                # Only rules flagged — LLM is confident and disagrees
-                # Trust the LLM decision
+            elif result.confidence_score > 0.80:
+                # Only rules flagged — LLM confident → trust LLM
                 result.needs_human_review = False
 
             else:
-                # Only rules flagged — LLM is uncertain
-                # Stay on safe side and escalate
+                # Only rules flagged — LLM uncertain → safe side
                 result.needs_human_review = True
-                result.review_reason = ", ".join(rule_result.review_reasons)
+                result.review_reason = (
+                    ", ".join(rule_result.review_reasons)
+                    if rule_result.review_reasons
+                    else None
+                )
 
-        # Priority — rules can only upgrade, never downgrade
+        # Priority — rules upgrade only if LLM uncertain
         if rule_result.forced_priority:
             RANK = {"low": 0, "medium": 1, "high": 2}
-            current = result.priority.value if hasattr(result.priority, "value") else result.priority
+            current = (
+                result.priority.value
+                if hasattr(result.priority, "value")
+                else result.priority
+            )
             forced = rule_result.forced_priority
-            if RANK[forced] > RANK[current]:
+            if (
+                RANK[forced] > RANK[current]
+                and result.confidence_score < 0.80
+            ):
                 result.priority = PriorityEnum(forced)
 
     # Log and return 

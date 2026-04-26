@@ -19,15 +19,15 @@ def health():
 
 # that function analyze the user ticket
 @router.post("/analyze-ticket", response_model=TicketResponse)
-def analyze_ticket(ticket: TicketRequest):
+async def analyze_ticket(ticket: TicketRequest):
 
-    result = analyze_ticket_logic(ticket)
+    result = await analyze_ticket_logic(ticket)
     increment("total_tickets")
 
     if result.needs_human_review:
         increment("human_review_tickets")
     return result
-
+ 
 @router.get("/stats")
 def stats():
     return get_metrics()

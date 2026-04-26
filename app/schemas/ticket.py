@@ -1,7 +1,7 @@
 
 # app/schemas/ticket.py
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
 from datetime import datetime
 from app.schemas.enums import ChannelEnum
@@ -26,3 +26,10 @@ class TicketRequest(BaseModel):
     reported_at: Optional[datetime] = None
     previous_conversation: Optional[List[str]] = None
     attachments_meta: Optional[List[AttachmentMeta]] = None
+
+    @field_validator('message')
+    @classmethod
+    def message_length(cls, v):
+        if len(v) > 2000:
+            raise ValueError('Message too long — max 2000 characters')
+        return v

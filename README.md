@@ -80,8 +80,8 @@ The system ensures **safe automation with human oversight for risky cases**.
 Rule Engine can only set needs_human_review to true, never false.
 
 ### Key Idea
-- LLM → understanding + interpretation layer
-- Rule Engine → safety + business control layer
+- LLM -> understanding + interpretation layer
+- Rule Engine -> safety + business control layer
 - Final output = combination of both (not one system alone)
 
 ---
@@ -95,7 +95,8 @@ Rule Engine can only set needs_human_review to true, never false.
 ##### Response:
 ```json
 {
-  "status": "ok"
+  "status": "ok",
+  "app_name": "Support Ticket Intelligence API"
 }
 ```
 
