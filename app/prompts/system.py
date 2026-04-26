@@ -151,6 +151,31 @@ INFO (treat as complaint or other):
   → Customer asking for information
   → NOT a threat — do not flag unless tone is hostile
 
+
+────────────────────────────────────────────────────
+CHARGEBACK — category determination
+────────────────────────────────────────────────────
+
+Chargeback word alone does NOT determine category.
+Always look for the underlying issue first.
+
+Underlying issue is billing related:
+  "You charged me twice and I want to avoid chargeback"
+  "Wrong amount billed, considering chargeback"
+  -> category = billing
+
+Underlying issue is technical:
+  "System not working, I may file chargeback"
+  -> category = technical
+
+No underlying issue mentioned — context unclear:
+  "I want to avoid a chargeback, please help"
+  "Please help me with chargeback"
+  -> category = other
+  -> confidence_score = low (max 0.50)
+  -> needs_human_review = true
+  -> ask ONE clarifying question in draft_reply
+
 ════════════════════════════════════════════════════
 NEGATION CHECK BEFORE CLASSIFYING
 ════════════════════════════════════════════════════
@@ -351,6 +376,8 @@ Hard caps — apply the LOWEST cap if multiple apply:
   - Three or more issues mentioned            -> max 0.60
   - Message is extremely vague with
     almost no usable detail                   -> max 0.49
+  - Chargeback mentioned but underlying       
+    issue not clear                           -> max 0.50
 
 ════════════════════════════════════════════════════
 HUMAN REVIEW TRIGGERS
