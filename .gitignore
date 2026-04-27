@@ -9,3 +9,4 @@ venv/
 .env/
 alembic/versions/__pycache__/.env
 .env
+logs/

@@ -1,8 +1,10 @@
+# app/modules/services/deterministic_rules.py
+
 import re
 from dataclasses import dataclass, field
 from typing import Optional
-from app.utils.logger import logger
-
+import logging
+logger = logging.getLogger(__name__)
 # Trigger phrase lists 
 
 LEGAL_THREATS = [
@@ -42,9 +44,9 @@ REFUND_DEMANDS = [
 ]
 
 CANCELLATION_DEMANDS = [
-    "cancel my account", "cancel my subscription",
+    "cancel my account now", "cancel my subscription now",
     "delete my account", "close my account",
-    "i want to cancel", "terminate my account",
+    "i want to cancel my", "terminate my account",
 ]
 
 
@@ -59,6 +61,9 @@ class RuleResult:
 
 
 def apply_rules(ticket) -> RuleResult:
+
+    logger.debug("[RULE] Evaluating rules")
+
     text = (
         (ticket.message or "") + " " + (ticket.subject or "")
     ).lower().strip()
@@ -69,11 +74,13 @@ def apply_rules(ticket) -> RuleResult:
     for phrase in LEGAL_THREATS:
         if phrase in text:
             logger.info(f"[RULE] Legal threat matched: '{phrase}'")
+
             result.needs_human_review = True
             result.forced_priority = "high"
             result.review_reasons.append(
                 f"Legal or financial threat detected: '{phrase}'"
             )
+
             result.inject_context.append(
                 "ALERT: This ticket contains a legal or financial threat. "
                 "Draft reply must be formal, empathetic, and non-committal. "
@@ -85,6 +92,7 @@ def apply_rules(ticket) -> RuleResult:
     for pattern in ABUSIVE_PATTERNS:
         if re.search(pattern, text):
             logger.info(f"[RULE] Abusive pattern matched: '{pattern}'")
+
             result.needs_human_review = True
             result.review_reasons.append("Abusive language detected")
             result.inject_context.append(
@@ -98,6 +106,7 @@ def apply_rules(ticket) -> RuleResult:
     for phrase in REFUND_DEMANDS:
         if phrase in text:
             logger.info(f"[RULE] Refund demand matched: '{phrase}'")
+
             result.needs_human_review = True
             result.forced_priority = result.forced_priority or "high"
             result.review_reasons.append("Explicit refund demand")
@@ -112,6 +121,7 @@ def apply_rules(ticket) -> RuleResult:
     for phrase in CANCELLATION_DEMANDS:
         if phrase in text:
             logger.info(f"[RULE] Cancellation demand matched: '{phrase}'")
+            
             result.needs_human_review = True
             result.forced_priority = result.forced_priority or "high"
             result.review_reasons.append("Account cancellation requested")
@@ -122,6 +132,10 @@ def apply_rules(ticket) -> RuleResult:
             )
             break
 
-    logger.info(f"from Rule engine --> {result}")
+    logger.info(
+    f"[RULE] review={result.needs_human_review} | "
+    f"priority={result.forced_priority} | "
+    f"reasons={result.review_reasons}"
+)
 
     return result

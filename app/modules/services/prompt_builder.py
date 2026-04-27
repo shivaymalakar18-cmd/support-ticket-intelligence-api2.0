@@ -1,11 +1,12 @@
 
 
-# app/services/prompt_builder.py
+# app/modules/services/prompt_builder.py
+
 # Builds a fresh user prompt for every ticket request.
 # Injects ticket data + rule engine alerts dynamically.
 
-from app.schemas.ticket import TicketRequest
-from app.services.deterministic_rules import RuleResult
+from app.dto.ticket import TicketRequest
+from app.modules.services.deterministic_rules import RuleResult
 
 
 def build_user_prompt(ticket: TicketRequest, rule_result: RuleResult) -> str:
@@ -27,7 +28,7 @@ def build_user_prompt(ticket: TicketRequest, rule_result: RuleResult) -> str:
     else:
         alerts_block = ""
 
-    # Optional fields — only include if present
+    # Optional fields - only include if present
     optional_lines = []
 
     if ticket.product_area:

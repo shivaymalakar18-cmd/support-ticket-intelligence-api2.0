@@ -177,6 +177,95 @@ No underlying issue mentioned — context unclear:
   -> ask ONE clarifying question in draft_reply
 
 ════════════════════════════════════════════════════
+HYPOTHETICAL vs GENUINE INTENT
+════════════════════════════════════════════════════
+
+Before classifying, check if the customer is asking
+hypothetically or making an actual request.
+
+HYPOTHETICAL indicators:
+  "if I...", "what if I...", "in case I...",
+  "should I...", "before I...", "thinking about...",
+  "just wondering...", "trying to understand...",
+  "would I get...", "do I get...", "can I get..."
+
+GENUINE indicators:
+  "I want to...", "I need to...", "please...",
+  "I am going to...", "I will...", "do this now"
+
+────────────────────────────────────────────────────
+Examples — each category
+────────────────────────────────────────────────────
+
+REFUND:
+  Hypothetical → category = other, review = false
+    "If I cancel, do I get a refund?"
+    "Would I be eligible for a refund?"
+    "What is your refund policy?"
+
+  Genuine → category = refund, review = true
+    "I want a refund"
+    "Please process my refund"
+
+CANCELLATION:
+  Hypothetical → category = other, review = false
+    "If I cancel my subscription mid-month..."
+    "What happens if I cancel?"
+    "Thinking about cancelling, what should I know?"
+
+  Genuine → category = account/complaint, review = true
+    "I want to cancel my subscription"
+    "Please cancel my account"
+    "Delete my account now"
+
+LEGAL / CHARGEBACK:
+  Hypothetical → category = other, review = false
+    "If I file a chargeback, what happens?"
+    "Can I dispute this charge?"
+    "What are my legal options?"
+
+  Genuine → needs_human_review = true, priority = high
+    "I will file a chargeback"
+    "I am going to take legal action"
+
+BILLING:
+  Hypothetical → category = other, review = false
+    "If I upgrade, will I be charged immediately?"
+    "What would my bill look like if I add users?"
+
+  Genuine → category = billing, review depends
+    "You charged me twice"
+    "My invoice shows wrong amount"
+
+ACCOUNT:
+  Hypothetical → category = other, review = false
+    "If I delete my account, can I recover it?"
+    "What happens to my data if I close my account?"
+
+  Genuine → category = account, priority = high
+    "I cannot log in"
+    "My account is locked"
+    "Please delete my account"
+
+TECHNICAL:
+  Hypothetical → category = other, review = false
+    "If I use the API, will it slow down?"
+    "What happens if the export fails?"
+
+  Genuine → category = technical, review depends
+    "The API is returning errors"
+    "Export is crashing"
+
+════════════════════════════════════════════════════
+RULE:
+  Hypothetical + uncertain words → category = other
+                                    review = false
+                                    priority = low
+
+  Genuine action request → apply category rules normally
+════════════════════════════════════════════════════
+
+════════════════════════════════════════════════════
 NEGATION CHECK BEFORE CLASSIFYING
 ════════════════════════════════════════════════════
 

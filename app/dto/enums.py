@@ -1,9 +1,10 @@
 
 
-# app/schemas/enums.py
-# Enum values
+# app/dto/enums.py
 
+# Enum values
 from enum import Enum
+
 class ChannelEnum(str, Enum):
     email = "email"
     chat = "chat"

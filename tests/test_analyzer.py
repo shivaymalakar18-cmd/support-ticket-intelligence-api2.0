@@ -3,7 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch
-from app.main import app  
+from main import app  
 
 client = TestClient(app)
 
@@ -157,7 +157,7 @@ def test_empty_body_returns_422():
 
 #  6. Duplicate Billing 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_BILLING)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_BILLING)
 def test_duplicate_billing_complaint(mock_llm):
     payload = make_payload(
         message="You charged me twice this month. $49 both times. Please fix this.",
@@ -172,7 +172,7 @@ def test_duplicate_billing_complaint(mock_llm):
 
 #  7. Calm Payment Failure 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_TECHNICAL)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_TECHNICAL)
 def test_calm_payment_failure(mock_llm):
     payload = make_payload(
         message="Hey my card got declined on upgrade. Not urgent just flagging it.",
@@ -186,7 +186,7 @@ def test_calm_payment_failure(mock_llm):
 
 #  8. Account Locked 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_ACCOUNT)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_ACCOUNT)
 def test_account_locked(mock_llm):
     payload = make_payload(
         message="I cannot log in. Tried password reset 3 times. No email received.",
@@ -200,7 +200,7 @@ def test_account_locked(mock_llm):
 
 #  9. Angry Refund Request 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_REFUND)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_REFUND)
 def test_angry_refund_triggers_review(mock_llm):
     payload = make_payload(
         message="I want a full refund immediately. This product is useless.",
@@ -215,7 +215,7 @@ def test_angry_refund_triggers_review(mock_llm):
 
 #  10. Feature Request As Complaint 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_FEATURE)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_FEATURE)
 def test_feature_request_as_complaint(mock_llm):
     payload = make_payload(
         message="Why is there no dark mode? Every tool has it. Very frustrating.",
@@ -230,7 +230,7 @@ def test_feature_request_as_complaint(mock_llm):
 
 #  11. Vague Ticket 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_LOW_CONFIDENCE)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_LOW_CONFIDENCE)
 def test_vague_ticket_triggers_review(mock_llm):
     payload = make_payload(
         message="not working since morning",
@@ -245,7 +245,7 @@ def test_vague_ticket_triggers_review(mock_llm):
 
 #  12. Bug Report Partial Info 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_TECHNICAL)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_TECHNICAL)
 def test_bug_report_partial_info(mock_llm):
     payload = make_payload(
         message="Export crashes sometimes on large files. Chrome on Windows 11.",
@@ -259,7 +259,7 @@ def test_bug_report_partial_info(mock_llm):
 
 #  13. Legal Threat Forces Review 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_BILLING)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_BILLING)
 def test_legal_threat_forces_review(mock_llm):
     payload = make_payload(
         message="I will file a chargeback with my bank if not resolved today.",
@@ -274,7 +274,7 @@ def test_legal_threat_forces_review(mock_llm):
 
 #  14. Abusive Language Forces Review 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_BILLING)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_BILLING)
 def test_abusive_language_forces_review(mock_llm):
     payload = make_payload(
         message="You people are scammers. This is fraud.",
@@ -288,7 +288,7 @@ def test_abusive_language_forces_review(mock_llm):
 
 #  15. Negation — Not A Threat 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_BILLING)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_BILLING)
 def test_negated_chargeback_not_flagged_by_rules(mock_llm):
     payload = make_payload(
         message="I do NOT want to file a chargeback. My invoice shows $49 instead of $29.",
@@ -302,7 +302,7 @@ def test_negated_chargeback_not_flagged_by_rules(mock_llm):
 
 #  16. Cancellation Demand Forces Review 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_REFUND)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_REFUND)
 def test_cancellation_demand_forces_review(mock_llm):
     payload = make_payload(
         message="I want to cancel my subscription immediately.",
@@ -316,7 +316,7 @@ def test_cancellation_demand_forces_review(mock_llm):
 
 #  17. LLM Failure — Fallback Response 
 
-@patch("app.services.analyzer.call_llm", side_effect=Exception("LLM timeout"))
+@patch("app.modules.services.analyzer.call_llm", side_effect=Exception("LLM timeout"))
 def test_llm_failure_returns_fallback(mock_llm):
     payload = make_payload()
     response = client.post("/analyze-ticket", json=payload)
@@ -329,7 +329,7 @@ def test_llm_failure_returns_fallback(mock_llm):
 
 #  18. Malformed LLM Output — Fallback 
 
-@patch("app.services.analyzer.call_llm", return_value="this is not json {{")
+@patch("app.modules.services.analyzer.call_llm", return_value="this is not json {{")
 def test_malformed_llm_output_returns_fallback(mock_llm):
     payload = make_payload()
     response = client.post("/analyze-ticket", json=payload)
@@ -341,7 +341,7 @@ def test_malformed_llm_output_returns_fallback(mock_llm):
 
 #  19. Response Schema Complete 
 
-@patch("app.services.analyzer.call_llm", return_value=MOCK_TECHNICAL)
+@patch("app.modules.services.analyzer.call_llm", return_value=MOCK_TECHNICAL)
 def test_response_schema_has_all_fields(mock_llm):
     payload = make_payload()
     response = client.post("/analyze-ticket", json=payload)

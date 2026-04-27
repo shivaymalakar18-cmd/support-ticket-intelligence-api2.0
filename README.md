@@ -6,7 +6,7 @@ using a hybrid of deterministic rules and LLM-based intent analysis.
 
 The system automatically classifies tickets, detects sentiment, assigns
 priority, generates a safe draft reply, and determines whether human
-review is required — with guaranteed safe fallback behavior when the
+review is required - with guaranteed safe fallback behavior when the
 LLM is unavailable.
 
 ---
@@ -18,7 +18,7 @@ LLM is unavailable.
 - Classifies the ticket (billing, technical, refund, account, feature_request, complaint, other)
 - Detects sentiment (positive, neutral, negative)
 - Assigns priority (low, medium, high)
-- Generates a concise summary (1–3 lines)
+- Generates a concise summary (1-3 lines)
 - Generates a safe draft reply (customer-facing)
 - Determines whether human review is required
 
@@ -30,21 +30,21 @@ The system ensures **safe automation with human oversight for risky cases**.
 
 ```
 support-ticket-api/
+├── main.py           
 ├── app/
-│   ├── main.py
-│   ├── api/
-│   │   └── routes.py
+│   ├── modules/
+│   │   ├── routes.py
+│   │   └── services/
+│   │       ├── analyzer.py
+│   │       ├── deterministic_rules.py
+│   │       ├── llm.py
+│   │       └── prompt_builder.py
 │   ├── core/
 │   │   └── config.py
-│   ├── schemas/
+│   ├── dto/
 │   │   ├── ticket.py
 │   │   ├── response.py
 │   │   └── enums.py
-│   ├── services/
-│   │   ├── analyzer.py
-│   │   ├── deterministic_rules.py
-│   │   ├── llm.py
-│   │   └── prompt_builder.py
 │   ├── prompts/
 │   │   └── system.py
 │   ├── observability/
@@ -54,6 +54,11 @@ support-ticket-api/
 ├── tests/
 │   ├── test_analyzer.py
 │   └── test_rules.py
+├── tickets/
+│   └── sample_tickets.json
+├── logs/
+│   ├── app.log
+│   └── error.log
 ├── .env.example
 ├── requirements.txt
 ├── DESIGN.md
@@ -254,9 +259,9 @@ Rule Engine can only set needs_human_review to true, never false.
 
 This project includes two types of tests:
 
-### Unit Tests — `tests/test_rules.py`
+### Unit Tests - `tests/test_rules.py`
 Tests the deterministic rule engine in isolation.
-No LLM call is made — pure Python logic only.
+No LLM call is made - pure Python logic only.
 
 Covers:
 - Legal threat detection
@@ -264,12 +269,12 @@ Covers:
 - Abusive language detection
 - Cancellation demand detection
 - Negation cases (e.g. "I do NOT want a refund")
-- Clean ticket — no false triggers
+- Clean ticket - no false triggers
 - Context injection verification
 
-### Integration Tests — `tests/test_analyzer.py`
+### Integration Tests - `tests/test_analyzer.py`
 Tests the full API pipeline end to end.
-LLM is mocked — no real API key required.
+LLM is mocked - no real API key required.
 
 Covers:
 - Duplicate billing complaint
@@ -277,14 +282,14 @@ Covers:
 - Account locked / password reset
 - Angry refund request
 - Feature request as complaint
-- Vague ticket — low confidence triggers review
+- Vague ticket - low confidence triggers review
 - Bug report with partial info
 - Legal threat / chargeback forces review
 - Abusive language forces review
-- Negated chargeback — should not flag
+- Negated chargeback - should not flag
 - Cancellation demand forces review
-- LLM failure — fallback response returned
-- Malformed LLM output — fallback response returned
+- LLM failure - fallback response returned
+- Malformed LLM output - fallback response returned
 - Response schema completeness check
 
 ### Run All Tests
@@ -311,7 +316,7 @@ GEMINI_API_KEY=test pytest tests/ -v
 
 ### Test Results
 ```
-37 passed in ~8s
+37 passed in 8s
 18 unit tests
 19 integration tests
 ```
@@ -339,8 +344,11 @@ GEMINI_API_KEY=test pytest tests/ -v
 - Rule engine is keyword-based and does not handle negation
   (e.g., "I do NOT want a refund" may be incorrectly flagged)
 - LLM confidence score is self-reported and not externally verified
-- previous_conversation field is not currently injected into the prompt
-- Single LLM provider — if Gemini is unavailable, system relies on fallback
+- `previous_conversation` field is accepted in the request 
+  but not currently injected into the prompt. 
+  Multi-turn conversation context is not used in analysis.
+  Planned as a future improvement.
+- Single LLM provider - if Gemini is unavailable, system relies on fallback
 - In-memory metrics reset on server restart
 - No authentication layer
 - No database persistence
@@ -358,34 +366,34 @@ failure points, and next improvements.
 
 ### Accuracy & Control
 - Currently the system relies on LLM for all semantic understanding
-  (intent, sentiment, classification). The LLM is a black box —
+  (intent, sentiment, classification). The LLM is a black box -
   we have no control over its internal reasoning.
 
 - To gain full control over the classification pipeline,
   the following layers will be added externally:
 
-  - **ML Classifier** — scikit-learn or FastText for obvious cases
-    (billing, account, technical) — fast, deterministic, no LLM cost
-  - **NLP Layer** — spaCy or NLTK for negation detection,
+  - **ML Classifier** - scikit-learn or FastText for obvious cases
+    (billing, account, technical) - fast, deterministic, no LLM cost
+  - **NLP Layer** - spaCy or NLTK for negation detection,
     entity extraction, and language detection
-  - **Embeddings** — sentence-transformers to convert tickets
+  - **Embeddings** - sentence-transformers to convert tickets
     into vector representations
-  - **Vector Database** — Pinecone or ChromaDB to store past tickets
+  - **Vector Database** - Pinecone or ChromaDB to store past tickets
     and retrieve similar resolved cases as context for LLM
-  - **Caching** — cache embeddings and similar ticket results
+  - **Caching** - cache embeddings and similar ticket results
     to reduce redundant LLM calls
 
-- LLM will then handle only genuinely ambiguous cases —
+- LLM will then handle only genuinely ambiguous cases -
   reducing cost by 60-70% and improving overall accuracy
 
 ### Reliability
 - Multiple LLM providers with circuit breaker pattern
-  (Gemini → OpenAI → Anthropic fallback chain)
-- Async task queue — Celery + Redis for background processing
+  (Gemini -> OpenAI -> Anthropic fallback chain)
+- Async task queue - Celery + Redis for background processing
 
 ### Data & Observability
 - Database persistence for ticket history and audit trail
-- Human feedback loop — agents correct wrong decisions,
+- Human feedback loop - agents correct wrong decisions,
   model improves over time
 - Persistent metrics with business analytics dashboard
 
@@ -406,7 +414,7 @@ cp .env.example .env
 # Add your GEMINI_API_KEY to .env file
 
 # 3. Run server
-uvicorn app.main:app --reload
+uvicorn main:app --reload
 # Server: http://localhost:8000
 # Docs:   http://localhost:8000/docs
 

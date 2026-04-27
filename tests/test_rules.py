@@ -3,8 +3,8 @@
 # These run without any LLM call — pure Python logic.
 
 import pytest
-from app.schemas.ticket import TicketRequest
-from app.services.deterministic_rules import apply_rules
+from app.dto.ticket import TicketRequest
+from app.modules.services.deterministic_rules import apply_rules
 
 
 def make_ticket(message: str, subject: str = "Test") -> TicketRequest:

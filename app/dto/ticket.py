@@ -1,10 +1,10 @@
 
-# app/schemas/ticket.py
+# app/dto/ticket.py
 
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
 from datetime import datetime
-from app.schemas.enums import ChannelEnum
+from app.dto.enums import ChannelEnum
 
 # this function is used to attech screenshots or imgs of problem like
 class AttachmentMeta(BaseModel):
@@ -33,3 +33,10 @@ class TicketRequest(BaseModel):
         if len(v) > 2000:
             raise ValueError('Message too long — max 2000 characters')
         return v
+    
+    @field_validator("customer_name", "subject", "message")
+    @classmethod
+    def must_not_be_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty")
+        return v.strip()
