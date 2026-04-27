@@ -26,6 +26,42 @@ The system ensures **safe automation with human oversight for risky cases**.
 
 ---
 
+## Project Structure
+
+```
+support-ticket-api/
+├── app/
+│   ├── main.py
+│   ├── api/
+│   │   └── routes.py
+│   ├── core/
+│   │   └── config.py
+│   ├── schemas/
+│   │   ├── ticket.py
+│   │   ├── response.py
+│   │   └── enums.py
+│   ├── services/
+│   │   ├── analyzer.py
+│   │   ├── deterministic_rules.py
+│   │   ├── llm.py
+│   │   └── prompt_builder.py
+│   ├── prompts/
+│   │   └── system.py
+│   ├── observability/
+│   │   └── metrics.py
+│   └── utils/
+│       └── logger.py
+├── tests/
+│   ├── test_analyzer.py
+│   └── test_rules.py
+├── .env.example
+├── requirements.txt
+├── DESIGN.md
+└── README.md
+```
+
+---
+
 ## Tech Stack
 
 - FastAPI
@@ -168,7 +204,7 @@ Rule Engine can only set needs_human_review to true, never false.
 
 ---
 
-## Human Review is triggers when
+## Human Review Triggers
 
 **Human review is required when:**  
 
@@ -214,21 +250,71 @@ Rule Engine can only set needs_human_review to true, never false.
 
 ---
 
-## Test Scenarios
+## Testing
 
-**Run :**
-```bash
-pytest
-```
-**Covered Cases:**   
+This project includes two types of tests:
+
+### Unit Tests — `tests/test_rules.py`
+Tests the deterministic rule engine in isolation.
+No LLM call is made — pure Python logic only.
+
+Covers:
+- Legal threat detection
+- Refund demand detection
+- Abusive language detection
+- Cancellation demand detection
+- Negation cases (e.g. "I do NOT want a refund")
+- Clean ticket — no false triggers
+- Context injection verification
+
+### Integration Tests — `tests/test_analyzer.py`
+Tests the full API pipeline end to end.
+LLM is mocked — no real API key required.
+
+Covers:
 - Duplicate billing complaint
-- Payment failure (calm user)
-- Account login issue
-- Refund angry request
-- Feature request complaint
-- Vague ticket
-- Bug report
-- Legal threat / chargeback   
+- Calm payment failure
+- Account locked / password reset
+- Angry refund request
+- Feature request as complaint
+- Vague ticket — low confidence triggers review
+- Bug report with partial info
+- Legal threat / chargeback forces review
+- Abusive language forces review
+- Negated chargeback — should not flag
+- Cancellation demand forces review
+- LLM failure — fallback response returned
+- Malformed LLM output — fallback response returned
+- Response schema completeness check
+
+### Run All Tests
+```bash
+pytest tests/ -v
+```
+
+### Run Specific Test Type
+```bash
+# Unit tests only
+pytest tests/test_rules.py -v
+
+# Integration tests only
+pytest tests/test_analyzer.py -v
+
+# Run specific test
+pytest tests/ -v -k "test_legal_threat"
+```
+
+### Run Without Real API Key
+```bash
+GEMINI_API_KEY=test pytest tests/ -v
+```
+
+### Test Results
+```
+37 passed in ~8s
+18 unit tests
+19 integration tests
+```
 
 ---
 
@@ -250,20 +336,62 @@ pytest
 
 ## Limitations
 
-- No database storage
+- Rule engine is keyword-based and does not handle negation
+  (e.g., "I do NOT want a refund" may be incorrectly flagged)
+- LLM confidence score is self-reported and not externally verified
+- previous_conversation field is not currently injected into the prompt
+- Single LLM provider — if Gemini is unavailable, system relies on fallback
+- In-memory metrics reset on server restart
 - No authentication layer
-- Depends on external LLM API
-- Rule system is keyword-based (not ML-based)  
+- No database persistence
+
+---
+
+## Design Note
+
+See [DESIGN.md](DESIGN.md) for engineering decisions,
+failure points, and next improvements.
 
 ---
 
 ## Future Improvements
 
-- Add database (ticket history storage)
-- Replace keyword rules with NLP model
-- Add async queue processing
-- Add admin dashboard
-- Add batch processing API
+### Accuracy & Control
+- Currently the system relies on LLM for all semantic understanding
+  (intent, sentiment, classification). The LLM is a black box —
+  we have no control over its internal reasoning.
+
+- To gain full control over the classification pipeline,
+  the following layers will be added externally:
+
+  - **ML Classifier** — scikit-learn or FastText for obvious cases
+    (billing, account, technical) — fast, deterministic, no LLM cost
+  - **NLP Layer** — spaCy or NLTK for negation detection,
+    entity extraction, and language detection
+  - **Embeddings** — sentence-transformers to convert tickets
+    into vector representations
+  - **Vector Database** — Pinecone or ChromaDB to store past tickets
+    and retrieve similar resolved cases as context for LLM
+  - **Caching** — cache embeddings and similar ticket results
+    to reduce redundant LLM calls
+
+- LLM will then handle only genuinely ambiguous cases —
+  reducing cost by 60-70% and improving overall accuracy
+
+### Reliability
+- Multiple LLM providers with circuit breaker pattern
+  (Gemini → OpenAI → Anthropic fallback chain)
+- Async task queue — Celery + Redis for background processing
+
+### Data & Observability
+- Database persistence for ticket history and audit trail
+- Human feedback loop — agents correct wrong decisions,
+  model improves over time
+- Persistent metrics with business analytics dashboard
+
+### Security
+- API authentication and rate limiting
+- Per-client request quotas
 
 ---
 
@@ -275,10 +403,10 @@ pip install -r requirements.txt
 
 # 2. Environment setup
 cp .env.example .env
-# .env mein apni GEMINI_API_KEY daalo
+# Add your GEMINI_API_KEY to .env file
 
 # 3. Run server
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 # Server: http://localhost:8000
 # Docs:   http://localhost:8000/docs
 
